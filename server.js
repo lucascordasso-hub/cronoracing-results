@@ -127,7 +127,17 @@ app.get('/api/results', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => {
-    console.log(`🚀 API e Site CronoRacing rodando na porta ${PORT}`);
+// Garante que a página inicial abra o index.html
+app.get('/', (_req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// Funciona tanto no seu PC (npm start) quanto na nuvem da Vercel
+if (require.main === module) {
+    const PORT = process.env.PORT || 8080;
+    app.listen(PORT, () => {
+        console.log(`🚀 API e Site CronoRacing rodando na porta ${PORT}`);
+    });
+}
+
+module.exports = app;
