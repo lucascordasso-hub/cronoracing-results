@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CronoRacing - Resultados Oficiais</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #121212; color: #ffffff; font-family: 'Inter', sans-serif; }
+        .font-racing { font-family: 'Orbitron', sans-serif; }
+        .btn-filter { transition: all 0.2s ease; }
+        .btn-filter-active { background-color: #E30613 !important; color: #ffffff !important; border-color: #E30613 !important; box-shadow: 0 0 12px rgba(227, 6, 19, 0.4); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1E1E1E; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #E30613; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- CABEÇALHO -->
+    <header class="bg-[#1E1E1E] border-b border-gray-800 sticky top-0 z-30 shadow-lg">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-racing tracking-wider uppercase">
+                        Crono<span class="text-[#E30613]">Racing</span>
+                    </h1>
+                    <p id="lblNomeEvento" class="text-xs text-gray-400 font-semibold truncate max-w-[220px] sm:max-w-md">Aguardando resultados...</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <span class="inline-block bg-black border border-gray-700 rounded px-2.5 py-1 text-[11px] font-mono text-gray-300">
+                    Classificados: <strong id="lblTotalAtletas" class="text-yellow-400">0</strong>
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-4 flex flex-col gap-5">
+
+        <!-- BARRA DE BUSCA POR NÚMERO DE PEITO OU NOME -->
+        <div class="bg-[#1E1E1E] p-4 rounded-xl border border-gray-800 shadow-md">
+            <label class="block text-[11px] font-bold uppercase text-gray-400 mb-1.5 tracking-wider">
+                🔍 Buscar por Número de Peito, Nome ou Equipe
+            </label>
+            <div class="relative">
+                <input type="text" id="inputBusca" placeholder="Digite o nº de peito (ex: 100678) ou nome do atleta..."
+                    class="w-full bg-black border border-gray-700 focus:border-[#E30613] rounded-lg px-4 py-3 text-white text-sm outline-none transition-colors font-medium">
+                <button id="btnLimparBusca" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded">
+                    Limpar ✕
+                </button>
+            </div>
+        </div>
+
+        <!-- PAINEL DE FILTROS EM 3 FILEIRAS DE BOTÕES -->
+        <div class="bg-[#1E1E1E] p-4 rounded-xl border border-gray-800 shadow-md flex flex-col gap-4">
+            
+            <!-- 1ª FILA: MODALIDADES -->
+            <div>
+                <span class="block text-[10px] font-bold uppercase text-gray-400 mb-2 tracking-wider">1. Modalidade</span>
+                <div id="filaModalidades" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <!-- 2ª FILA: SEXO -->
+            <div class="border-t border-gray-800 pt-3">
+                <span class="block text-[10px] font-bold uppercase text-gray-400 mb-2 tracking-wider">2. Sexo</span>
+                <div id="filaSexo" class="flex flex-wrap gap-2">
+                    <button onclick="selecionarSexo('TODOS')" data-sexo="TODOS" class="btn-filter btn-filter-active bg-black border border-gray-700 text-gray-300 px-4 py-1.5 rounded-lg text-xs font-bold uppercase">Todos</button>
+                    <button onclick="selecionarSexo('MASCULINO')" data-sexo="MASCULINO" class="btn-filter bg-black border border-gray-700 text-gray-300 hover:border-gray-500 px-4 py-1.5 rounded-lg text-xs font-bold uppercase">🚹 Masculino</button>
+                    <button onclick="selecionarSexo('FEMININO')" data-sexo="FEMININO" class="btn-filter bg-black border border-gray-700 text-gray-300 hover:border-gray-500 px-4 py-1.5 rounded-lg text-xs font-bold uppercase">🚺 Feminino</button>
+                </div>
+            </div>
+
+            <!-- 3ª FILA: CATEGORIAS (DINÂMICA) -->
+            <div class="border-t border-gray-800 pt-3">
+                <span class="block text-[10px] font-bold uppercase text-gray-400 mb-2 tracking-wider">3. Categorias</span>
+                <div id="filaCategorias" class="flex flex-col gap-3"></div>
+            </div>
+
+        </div>
+
+        <!-- LISTA DE RESULTADOS -->
+        <div id="containerResultados" class="flex flex-col gap-6 pb-10">
+            <div class="text-center text-gray-500 py-12">Carregando resultados...</div>
+        </div>
+
+    </main>
+
+    <!-- PÁGINA / MODAL DE DETALHES DO ATLETA -->
+    <div id="modalAtleta" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-[#1E1E1E] border border-gray-700 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl">
+            
+            <div class="bg-gradient-to-r from-[#121212] via-[#1E1E1E] to-[#121212] border-b border-gray-800 p-5 flex justify-between items-start">
+                <div>
+                    <span id="detEvento" class="text-[10px] font-bold uppercase tracking-widest text-[#E30613] block mb-1">EVENTO</span>
+                    <h2 id="detNome" class="text-lg sm:text-xl font-extrabold text-white leading-tight">NOME DO ATLETA</h2>
+                    <p id="detEquipe" class="text-xs text-gray-400 mt-1 font-medium">EQUIPE</p>
+                </div>
+                <button onclick="fecharDetalheAtleta()" class="bg-gray-800 hover:bg-[#E30613] text-gray-300 hover:text-white rounded-lg w-8 h-8 flex items-center justify-center font-bold transition-colors">
+                    ✕
+                </button>
+            </div>
+
+            <div class="p-5 flex flex-col gap-4">
+                
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div class="bg-black border border-gray-800 rounded-xl p-3 text-center">
+                        <span class="text-[10px] text-gray-500 uppercase font-bold block">Nº de Peito</span>
+                        <span id="detPeito" class="font-mono text-lg font-extrabold text-yellow-400 mt-0.5 block">#000</span>
+                    </div>
+                    <div class="bg-black border border-gray-800 rounded-xl p-3 text-center">
+                        <span class="text-[10px] text-gray-500 uppercase font-bold block">Modalidade</span>
+                        <span id="detModalidade" class="text-xs font-bold text-white mt-1.5 block truncate">GERAL</span>
+                    </div>
+                    <div class="bg-black border border-gray-800 rounded-xl p-3 text-center">
+                        <span class="text-[10px] text-gray-500 uppercase font-bold block">Categoria</span>
+                        <span id="detCategoria" class="text-xs font-bold text-blue-400 mt-1.5 block truncate">F30-39</span>
+                    </div>
+                    <div class="bg-black border border-gray-800 rounded-xl p-3 text-center">
+                        <span class="text-[10px] text-gray-500 uppercase font-bold block">Status</span>
+                        <span id="detStatus" class="text-xs font-bold text-green-400 mt-1.5 block">Concluído</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-gradient-to-br from-black to-[#161616] border border-gray-800 rounded-xl p-4 text-center">
+                        <span class="text-[10px] text-gray-400 uppercase font-bold block tracking-wider">Posição Geral (<span id="detSexoCurto">M</span>)</span>
+                        <span id="detPosGeral" class="font-racing text-3xl font-black text-white mt-1 block">1º</span>
+                        <span id="detBadgeGeral" class="hidden mt-1 inline-block bg-yellow-500/20 border border-yellow-500/40 text-yellow-300 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            🏆 PÓDIO GERAL
+                        </span>
+                    </div>
+                    <div class="bg-gradient-to-br from-black to-[#161616] border border-gray-800 rounded-xl p-4 text-center">
+                        <span class="text-[10px] text-gray-400 uppercase font-bold block tracking-wider">Posição Categoria</span>
+                        <span id="detPosCat" class="font-racing text-3xl font-black text-blue-400 mt-1 block">1º</span>
+                        <span id="detSubCat" class="text-[10px] text-gray-500 mt-1 block">Faixa Etária</span>
+                    </div>
+                </div>
+
+                <!-- Tempos e Pace -->
+                <div class="grid grid-cols-3 gap-2.5 bg-black p-3.5 rounded-xl border border-gray-800">
+                    <div class="text-center border-r border-gray-800 pr-2">
+                        <span class="text-[10px] text-gray-500 uppercase font-bold block">Tempo Líquido</span>
+                        <span id="detTempoLiquido" class="font-mono text-sm sm:text-base font-bold text-green-400 mt-1 block">00:00:00.000</span>
+                    </div>
+                    <div class="text-center border-r border-gray-800 pr-2">
+                        <span class="text-[10px] text-gray-500 uppercase font-bold block">Tempo Bruto</span>
+                        <span id="detTempoBruto" class="font-mono text-sm sm:text-base font-bold text-gray-300 mt-1 block">00:00:00.000</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="text-[10px] text-gray-500 uppercase font-bold block">Pace</span>
+                        <span id="detPace" class="font-mono text-xs sm:text-sm font-bold text-yellow-400 mt-1.5 block">-</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="bg-[#151515] px-5 py-3 border-t border-gray-800 flex justify-between items-center">
+                <span class="text-[11px] text-gray-500 font-racing">CRONORACING TELEMETRY</span>
+                <button onclick="fecharDetalheAtleta()" class="bg-[#E30613] hover:bg-[#b9000d] text-white text-xs font-bold px-5 py-2 rounded-lg transition-colors">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let estadoEvento = {
+            titulo: "Aguardando Resultados...",
+            atletas: []
+        };
+
+        let filtroModalidade = "TODOS";
+        let filtroSexo = "TODOS";
+        let filtroCategoria = "TODOS";
+        let termoBusca = "";
+
+        function normalizarAtleta(raw) {
+            let mod = (raw.modality || raw.modalidade || "").trim();
+            let cat = (raw.category || raw.categoria || "GERAL").trim();
+            let statusStr = String(raw.status || "Concluído").trim();
+
+            if (!mod && cat.includes(" - ")) {
+                const partes = cat.split(" - ");
+                mod = partes[0].trim();
+                cat = partes.slice(1).join(" - ").trim();
+            }
+            if (!mod) mod = "GERAL";
+
+            let sexo = String(raw.gender || raw.sexo || "").trim().toUpperCase();
+            if (sexo === "M" || sexo === "MASC" || sexo.startsWith("MASC")) sexo = "MASCULINO";
+            else if (sexo === "F" || sexo === "FEM" || sexo.startsWith("FEM")) sexo = "FEMININO";
+
+            const rankGen = (raw.rank_general !== null && raw.rank_general !== undefined && Number(raw.rank_general) > 0)
+                ? Number(raw.rank_general) : null;
+            const rankCat = (raw.rank_category !== null && raw.rank_category !== undefined && Number(raw.rank_category) > 0)
+                ? Number(raw.rank_category) : null;
+
+            // ⚡ REGRA DO SISTEMA PARA DESCLASSIFICADOS (DSQ, DNF, DNS):
+            // No motor.js, desclassificados vêm com rank_general = null, rank_category = null
+            // e status/category como DSQ, DNF, DNS ou Desclassificado.
+            const statusUpper = statusStr.toUpperCase();
+            const catUpper = cat.toUpperCase();
+            const isDsq = (
+                statusUpper === "DSQ" || statusUpper === "DNF" || statusUpper === "DNS" ||
+                statusUpper.includes("DESCLASSIFICADO") || statusUpper.includes("NÃO TERMINOU") || statusUpper.includes("NÃO LARGOU") ||
+                catUpper === "DSQ" || catUpper === "DNF" || catUpper === "DNS" ||
+                (rankGen === null && rankCat === null)
+            );
+
+            return {
+                bib_number: String(raw.bib_number || ""),
+                athlete_name: String(raw.athlete_name || "ATLETA"),
+                modality: mod,
+                category: isDsq ? "DSQ" : cat,
+                status: statusStr,
+                gender: sexo,
+                rank_general: rankGen,
+                rank_category: rankCat,
+                time_gross: raw.time_gross || "-",
+                time_net: raw.time_net || "-",
+                team_name: raw.team_name || "AVULSO",
+                pace: raw.pace || "-",
+                isDsq: isDsq,
+                // Só é Pódio Geral se NÃO for DSQ, tiver rank_general > 0 e rank_category === null
+                isPodioGeral: (!isDsq && rankGen !== null && rankCat === null)
+            };
+        }
+
+        function modalidadeTemCategoriaGeral(modName) {
+            return estadoEvento.atletas.some(a => a.modality === modName && a.isPodioGeral);
+        }
+
+        async function carregarResultados() {
+            try {
+                const res = await fetch('/api/results' + window.location.search);
+                if (!res.ok) return;
+                const data = await res.json();
+
+                if (!data || !data.event) {
+                    estadoEvento.titulo = "Aguardando Resultados...";
+                    estadoEvento.atletas = [];
+                } else {
+                    estadoEvento.titulo = data.event.event_title || "Resultados Oficiais";
+                    estadoEvento.atletas = (data.results || []).map(normalizarAtleta);
+                }
+                atualizarInterfaceCompleta();
+            } catch (e) {
+                console.error("Erro ao buscar resultados:", e);
+            }
+        }
+
+        function atualizarInterfaceCompleta() {
+            document.getElementById("lblNomeEvento").textContent = estadoEvento.titulo;
+            document.getElementById("lblTotalAtletas").textContent = estadoEvento.atletas.filter(a => !a.isDsq).length;
+
+            renderizarFilaModalidades();
+            renderizarFilaSexo();
+            renderizarFilaCategorias();
+            renderizarListaResultados();
+        }
+
+        function renderizarFilaModalidades() {
+            const container = document.getElementById("filaModalidades");
+            const modalidadesUnicas = [...new Set(estadoEvento.atletas.map(a => a.modality))];
+
+            if (filtroModalidade !== "TODOS" && !modalidadesUnicas.includes(filtroModalidade)) {
+                filtroModalidade = "TODOS";
+            }
+
+            let html = `<button onclick="selecionarModalidade('TODOS')" class="btn-filter ${filtroModalidade === 'TODOS' ? 'btn-filter-active' : ''} bg-black border border-gray-700 text-gray-300 hover:border-gray-500 px-4 py-1.5 rounded-lg text-xs font-bold uppercase">Todos</button>`;
+
+            modalidadesUnicas.forEach(mod => {
+                const ativo = (filtroModalidade === mod) ? "btn-filter-active" : "";
+                html += `<button onclick="selecionarModalidade('${mod.replace(/'/g, "\\'")}')" class="btn-filter ${ativo} bg-black border border-gray-700 text-gray-300 hover:border-gray-500 px-4 py-1.5 rounded-lg text-xs font-bold uppercase">${mod}</button>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderizarFilaSexo() {
+            document.querySelectorAll("#filaSexo button").forEach(btn => {
+                if (btn.dataset.sexo === filtroSexo) btn.classList.add("btn-filter-active");
+                else btn.classList.remove("btn-filter-active");
+            });
+        }
+
+        function renderizarFilaCategorias() {
+            const container = document.getElementById("filaCategorias");
+            const modalidadesUnicas = [...new Set(estadoEvento.atletas.map(a => a.modality))];
+            const modsAlvo = (filtroModalidade === "TODOS") ? modalidadesUnicas : [filtroModalidade];
+
+            let html = `
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="selecionarCategoria('TODOS')" class="btn-filter ${filtroCategoria === 'TODOS' ? 'btn-filter-active' : ''} bg-black border border-gray-700 text-gray-300 hover:border-gray-500 px-4 py-1.5 rounded-lg text-xs font-bold uppercase">
+                        📋 Todas
+                    </button>
+                </div>
+            `;
+
+            modsAlvo.forEach(mod => {
+                const atletasModSexo = estadoEvento.atletas.filter(a => {
+                    if (a.modality !== mod) return false;
+                    if (filtroSexo !== "TODOS" && a.gender !== filtroSexo) return false;
+                    return true;
+                });
+
+                if (atletasModSexo.length === 0) return;
+
+                const temGeral = modalidadeTemCategoriaGeral(mod);
+                const temDsq = atletasModSexo.some(a => a.isDsq);
+
+                // Categorias válidas (exclui DSQ e exclui quem está só no Pódio Geral)
+                const categoriasUnicas = [...new Set(
+                    atletasModSexo.filter(a => !a.isDsq && (!a.isPodioGeral || !temGeral)).map(a => a.category)
+                )].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+                let botoesHtml = "";
+
+                if (temGeral) {
+                    const chaveGeral = `GERAL::${mod}`;
+                    const ativoGeral = (filtroCategoria === chaveGeral) ? "btn-filter-active" : "";
+                    botoesHtml += `
+                        <button onclick="selecionarCategoria('${chaveGeral.replace(/'/g, "\\'")}')" class="btn-filter ${ativoGeral} bg-black border border-yellow-600/60 text-yellow-400 hover:border-yellow-400 px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase">
+                            🏆 Geral
+                        </button>
+                    `;
+                }
+
+                categoriasUnicas.forEach(cat => {
+                    const chaveCat = `${mod}::${cat}`;
+                    const ativoCat = (filtroCategoria === chaveCat) ? "btn-filter-active" : "";
+                    botoesHtml += `
+                        <button onclick="selecionarCategoria('${chaveCat.replace(/'/g, "\\'")}')" class="btn-filter ${ativoCat} bg-black border border-gray-700 text-gray-300 hover:border-gray-500 px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase">
+                            ${cat}
+                        </button>
+                    `;
+                });
+
+                // Se houver atletas desclassificados nesta modalidade, cria o botão separado de DSQ
+                if (temDsq) {
+                    const chaveDsq = `DSQ::${mod}`;
+                    const ativoDsq = (filtroCategoria === chaveDsq) ? "btn-filter-active" : "";
+                    botoesHtml += `
+                        <button onclick="selecionarCategoria('${chaveDsq.replace(/'/g, "\\'")}')" class="btn-filter ${ativoDsq} bg-black border border-red-800/80 text-red-400 hover:border-red-500 px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase">
+                            🚫 Desclassificados
+                        </button>
+                    `;
+                }
+
+                if (filtroModalidade === "TODOS" && modalidadesUnicas.length > 1) {
+                    html += `
+                        <div class="bg-[#151515] p-3 rounded-lg border border-gray-800">
+                            <span class="text-[10px] font-racing text-[#E30613] uppercase block mb-2">${mod}</span>
+                            <div class="flex flex-wrap gap-2">${botoesHtml}</div>
+                        </div>
+                    `;
+                } else {
+                    html += `<div class="flex flex-wrap gap-2">${botoesHtml}</div>`;
+                }
+            });
+
+            container.innerHTML = html;
+        }
+
+        window.selecionarModalidade = (mod) => {
+            filtroModalidade = mod;
+            filtroCategoria = "TODOS";
+            atualizarInterfaceCompleta();
+        };
+
+        window.selecionarSexo = (sexo) => {
+            filtroSexo = sexo;
+            atualizarInterfaceCompleta();
+        };
+
+        window.selecionarCategoria = (chaveCat) => {
+            filtroCategoria = chaveCat;
+            atualizarInterfaceCompleta();
+        };
+
+        function criarBlocoTabela(tituloSecao, subtitulo, listaAtletas, modoPosicao) {
+            if (!listaAtletas || listaAtletas.length === 0) return "";
+
+            let linhasHtml = "";
+            listaAtletas.forEach((a, idx) => {
+                let badgePosicao = "";
+                let rowBg = "hover:bg-white/5";
+
+                // ⚡ SE FOR DESCLASSIFICADO: Nunca recebe número de posição nem medalha!
+                if (a.isDsq || modoPosicao === "DSQ") {
+                    badgePosicao = `<span class="inline-flex items-center justify-center px-2 py-0.5 rounded bg-red-900/40 border border-red-700 text-red-400 font-mono text-[11px] font-bold">DSQ</span>`;
+                    rowBg = "bg-red-950/10 hover:bg-red-950/20 opacity-80";
+                } else {
+                    const posExibida = (modoPosicao === "GERAL")
+                        ? (a.rank_general || idx + 1)
+                        : (a.rank_category || a.rank_general || idx + 1);
+
+                    // Regra: Geral é dinâmico; Categoria é chumbado no Top 3
+                    const ehPodio = (modoPosicao === "GERAL") ? a.isPodioGeral : (posExibida <= 3);
+
+                    badgePosicao = `<span class="font-mono font-bold text-gray-400">${posExibida}º</span>`;
+
+                    if (ehPodio) {
+                        if (posExibida === 1) {
+                            badgePosicao = `<span class="inline-flex items-center justify-center px-2 py-0.5 rounded bg-yellow-500/20 border border-yellow-500 text-yellow-300 font-racing text-xs font-bold">🥇 1º</span>`;
+                            rowBg = "bg-yellow-500/5 hover:bg-yellow-500/10";
+                        } else if (posExibida === 2) {
+                            badgePosicao = `<span class="inline-flex items-center justify-center px-2 py-0.5 rounded bg-gray-300/20 border border-gray-300 text-gray-200 font-racing text-xs font-bold">🥈 2º</span>`;
+                            rowBg = "bg-gray-400/5 hover:bg-gray-400/10";
+                        } else if (posExibida === 3) {
+                            badgePosicao = `<span class="inline-flex items-center justify-center px-2 py-0.5 rounded bg-amber-700/30 border border-amber-500 text-amber-300 font-racing text-xs font-bold">🥉 3º</span>`;
+                            rowBg = "bg-amber-700/5 hover:bg-amber-700/10";
+                        } else {
+                            badgePosicao = `<span class="inline-flex items-center justify-center px-2 py-0.5 rounded bg-[#E30613]/20 border border-[#E30613] text-red-300 font-racing text-xs font-bold">🏅 ${posExibida}º</span>`;
+                            rowBg = "bg-[#E30613]/5 hover:bg-[#E30613]/10";
+                        }
+                    }
+                }
+
+                linhasHtml += `
+                    <tr onclick="abrirDetalheAtleta('${a.bib_number.replace(/'/g, "\\'")}')" class="border-b border-gray-800/70 transition-colors cursor-pointer ${rowBg}">
+                        <td class="p-3 text-center whitespace-nowrap">${badgePosicao}</td>
+                        <td class="p-3 text-center font-mono text-yellow-400 font-bold text-sm whitespace-nowrap">#${a.bib_number}</td>
+                        <td class="p-3">
+                            <div class="font-bold text-white text-xs sm:text-sm">${a.athlete_name}</div>
+                            <div class="text-[11px] text-gray-400">${a.team_name}</div>
+                        </td>
+                        <td class="p-3 hidden sm:table-cell text-center text-xs ${a.isDsq ? 'text-red-400 font-bold' : 'text-gray-300 font-semibold'}">${a.isDsq ? a.status : a.category}</td>
+                        <td class="p-3 text-center font-mono text-xs sm:text-sm font-bold ${a.isDsq ? 'text-gray-500' : 'text-green-400'} whitespace-nowrap">${a.time_net}</td>
+                        <td class="p-3 hidden md:table-cell text-center font-mono text-xs text-gray-400 whitespace-nowrap">${a.time_gross}</td>
+                        <td class="p-3 hidden lg:table-cell text-center font-mono text-xs text-yellow-400 whitespace-nowrap">${a.pace}</td>
+                        <td class="p-3 text-center">
+                            <span class="text-[11px] bg-gray-800 hover:bg-[#E30613] text-gray-200 px-2.5 py-1 rounded-md font-semibold transition-colors">Detalhes</span>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            return `
+                <div class="bg-[#1E1E1E] border border-gray-800 rounded-xl overflow-hidden shadow-lg">
+                    <div class="bg-[#161616] px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+                        <div>
+                            <h3 class="font-racing text-sm sm:text-base text-white uppercase tracking-wider">${tituloSecao}</h3>
+                            ${subtitulo ? `<p class="text-[11px] text-gray-400">${subtitulo}</p>` : ''}
+                        </div>
+                        <span class="text-xs font-mono bg-black border border-gray-800 text-gray-400 px-2.5 py-1 rounded">
+                            ${listaAtletas.length} atleta(s)
+                        </span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-black/60 border-b border-gray-800 text-[10px] uppercase text-gray-400 tracking-wider">
+                                    <th class="p-3 text-center w-20">Pos</th>
+                                    <th class="p-3 text-center w-20">Peito</th>
+                                    <th class="p-3">Atleta / Equipe</th>
+                                    <th class="p-3 hidden sm:table-cell text-center">Categoria</th>
+                                    <th class="p-3 text-center">T. Líquido</th>
+                                    <th class="p-3 hidden md:table-cell text-center">T. Bruto</th>
+                                    <th class="p-3 hidden lg:table-cell text-center">Pace</th>
+                                    <th class="p-3 text-center w-24">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>${linhasHtml}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderizarListaResultados() {
+            const container = document.getElementById("containerResultados");
+
+            if (estadoEvento.atletas.length === 0) {
+                container.innerHTML = `<div class="text-center text-gray-500 py-12 bg-[#1E1E1E] rounded-xl border border-gray-800">Nenhum resultado publicado até o momento.</div>`;
+                return;
+            }
+
+            if (termoBusca !== "") {
+                const buscados = estadoEvento.atletas.filter(a =>
+                    a.bib_number.toLowerCase().includes(termoBusca) ||
+                    a.athlete_name.toLowerCase().includes(termoBusca) ||
+                    a.team_name.toLowerCase().includes(termoBusca)
+                ).sort((a, b) => {
+                    if (a.isDsq !== b.isDsq) return a.isDsq ? 1 : -1;
+                    return (a.rank_general || 999999) - (b.rank_general || 999999);
+                });
+
+                if (buscados.length === 0) {
+                    container.innerHTML = `<div class="text-center text-gray-400 py-10 bg-[#1E1E1E] rounded-xl border border-gray-800">Nenhum atleta encontrado para <strong>"${termoBusca}"</strong>.</div>`;
+                } else {
+                    container.innerHTML = criarBlocoTabela(`🔍 Resultado da Busca`, `Filtro: "${termoBusca}"`, buscados, "GERAL");
+                }
+                return;
+            }
+
+            const modalidadesUnicas = [...new Set(estadoEvento.atletas.map(a => a.modality))];
+            const modsAlvo = (filtroModalidade === "TODOS") ? modalidadesUnicas : [filtroModalidade];
+            const sexosAlvo = (filtroSexo === "TODOS") ? ["MASCULINO", "FEMININO"] : [filtroSexo];
+
+            let htmlFinal = "";
+
+            modsAlvo.forEach(mod => {
+                const temGeral = modalidadeTemCategoriaGeral(mod);
+
+                if (filtroCategoria !== "TODOS") {
+                    const [tipoOuMod, valorCat] = filtroCategoria.split("::");
+
+                    if (tipoOuMod === "GERAL" && valorCat === mod) {
+                        sexosAlvo.forEach(sx => {
+                            const listaGeral = estadoEvento.atletas
+                                .filter(a => a.modality === mod && a.gender === sx && a.isPodioGeral)
+                                .sort((a, b) => (a.rank_general || 999999) - (b.rank_general || 999999));
+
+                            htmlFinal += criarBlocoTabela(
+                                `🏆 ${mod} - GERAL ${sx}`,
+                                `Classificados na Categoria Geral`,
+                                listaGeral,
+                                "GERAL"
+                            );
+                        });
+                    } else if (tipoOuMod === "DSQ" && valorCat === mod) {
+                        const listaDsq = estadoEvento.atletas
+                            .filter(a => a.modality === mod && a.isDsq && (filtroSexo === "TODOS" || a.gender === filtroSexo))
+                            .sort((a, b) => a.athlete_name.localeCompare(b.athlete_name));
+
+                        htmlFinal += criarBlocoTabela(
+                            `🚫 ${mod} - DESCLASSIFICADOS / NÃO CONCLUÍDOS`,
+                            `Atletas com status DSQ, DNF ou DNS`,
+                            listaDsq,
+                            "DSQ"
+                        );
+                    } else if (tipoOuMod === mod) {
+                        const listaCat = estadoEvento.atletas
+                            .filter(a => {
+                                if (a.isDsq) return false;
+                                if (a.modality !== mod || a.category !== valorCat) return false;
+                                if (filtroSexo !== "TODOS" && a.gender !== filtroSexo) return false;
+                                if (temGeral && a.isPodioGeral) return false;
+                                return true;
+                            })
+                            .sort((a, b) => (a.rank_category || a.rank_general || 999999) - (b.rank_category || b.rank_general || 999999));
+
+                        htmlFinal += criarBlocoTabela(
+                            `🏷️ ${mod} - CATEGORIA ${valorCat}`,
+                            `Classificação Oficial da Categoria`,
+                            listaCat,
+                            "CATEGORIA"
+                        );
+                    }
+                    return;
+                }
+
+                // Visualização "TODOS": 1º Geral, 2º Categorias, 3º Desclassificados (se houver)
+                if (temGeral) {
+                    sexosAlvo.forEach(sx => {
+                        const listaGeral = estadoEvento.atletas
+                            .filter(a => a.modality === mod && a.gender === sx && a.isPodioGeral)
+                            .sort((a, b) => (a.rank_general || 999999) - (b.rank_general || 999999));
+
+                        htmlFinal += criarBlocoTabela(
+                            `🏆 ${mod} - GERAL ${sx}`,
+                            `Classificados na Categoria Geral`,
+                            listaGeral,
+                            "GERAL"
+                        );
+                    });
+                }
+
+                const catsDaMod = [...new Set(
+                    estadoEvento.atletas
+                        .filter(a => !a.isDsq && a.modality === mod && (filtroSexo === "TODOS" || a.gender === filtroSexo) && (!temGeral || !a.isPodioGeral))
+                        .map(a => a.category)
+                )].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+                catsDaMod.forEach(cat => {
+                    const listaCat = estadoEvento.atletas
+                        .filter(a => {
+                            if (a.isDsq) return false;
+                            if (a.modality !== mod || a.category !== cat) return false;
+                            if (filtroSexo !== "TODOS" && a.gender !== filtroSexo) return false;
+                            if (temGeral && a.isPodioGeral) return false;
+                            return true;
+                        })
+                        .sort((a, b) => (a.rank_category || a.rank_general || 999999) - (b.rank_category || b.rank_general || 999999));
+
+                    htmlFinal += criarBlocoTabela(
+                        `🏷️ ${mod} - CATEGORIA ${cat}`,
+                        `Classificação por Categoria`,
+                        listaCat,
+                        "CATEGORIA"
+                    );
+                });
+
+                // Se houver DSQs no JSON, exibe no final da página em uma tabela separada
+                const listaDsqMod = estadoEvento.atletas
+                    .filter(a => a.modality === mod && a.isDsq && (filtroSexo === "TODOS" || a.gender === filtroSexo))
+                    .sort((a, b) => a.athlete_name.localeCompare(b.athlete_name));
+
+                if (listaDsqMod.length > 0) {
+                    htmlFinal += criarBlocoTabela(
+                        `🚫 ${mod} - DESCLASSIFICADOS`,
+                        `Atletas sem classificação oficial`,
+                        listaDsqMod,
+                        "DSQ"
+                    );
+                }
+            });
+
+            container.innerHTML = htmlFinal || `<div class="text-center text-gray-500 py-10 bg-[#1E1E1E] rounded-xl border border-gray-800">Nenhum atleta encontrado para os filtros selecionados.</div>`;
+        }
+
+        window.abrirDetalheAtleta = (bibNumber) => {
+            const atleta = estadoEvento.atletas.find(a => a.bib_number === String(bibNumber));
+            if (!atleta) return;
+
+            document.getElementById("detEvento").textContent = estadoEvento.titulo;
+            document.getElementById("detNome").textContent = atleta.athlete_name;
+            document.getElementById("detEquipe").textContent = `Equipe: ${atleta.team_name}`;
+            document.getElementById("detPeito").textContent = `#${atleta.bib_number}`;
+            document.getElementById("detModalidade").textContent = atleta.modality;
+            document.getElementById("detCategoria").textContent = atleta.isDsq ? "N/A" : atleta.category;
+
+            const elStatus = document.getElementById("detStatus");
+            elStatus.textContent = atleta.status;
+            elStatus.className = atleta.isDsq
+                ? "text-xs font-bold text-red-400 mt-1.5 block"
+                : "text-xs font-bold text-green-400 mt-1.5 block";
+
+            document.getElementById("detSexoCurto").textContent = atleta.gender === "FEMININO" ? "Fem" : "Masc";
+
+            const badgeGeral = document.getElementById("detBadgeGeral");
+
+            if (atleta.isDsq) {
+                badgeGeral.classList.add("hidden");
+                document.getElementById("detPosGeral").textContent = "DSQ";
+                document.getElementById("detPosCat").textContent = "-";
+                document.getElementById("detSubCat").textContent = "Atleta Desclassificado";
+            } else if (atleta.isPodioGeral) {
+                badgeGeral.textContent = "🏆 PÓDIO GERAL";
+                badgeGeral.classList.remove("hidden");
+                document.getElementById("detPosGeral").textContent = `${atleta.rank_general}º`;
+                document.getElementById("detPosCat").textContent = "GERAL";
+                document.getElementById("detSubCat").textContent = "Classificado na Categoria Geral";
+            } else {
+                if (atleta.rank_category && atleta.rank_category <= 3) {
+                    badgeGeral.textContent = `🏅 TOP ${atleta.rank_category} CATEGORIA`;
+                    badgeGeral.classList.remove("hidden");
+                } else {
+                    badgeGeral.classList.add("hidden");
+                }
+                document.getElementById("detPosGeral").textContent = atleta.rank_general ? `${atleta.rank_general}º` : "-";
+                document.getElementById("detPosCat").textContent = atleta.rank_category ? `${atleta.rank_category}º` : "-";
+                document.getElementById("detSubCat").textContent = `Categoria ${atleta.category}`;
+            }
+
+            document.getElementById("detTempoLiquido").textContent = atleta.time_net;
+            document.getElementById("detTempoBruto").textContent = atleta.time_gross;
+            document.getElementById("detPace").textContent = atleta.pace;
+
+            const modal = document.getElementById("modalAtleta");
+            modal.classList.remove("hidden");
+            modal.classList.add("flex");
+        };
+
+        window.fecharDetalheAtleta = () => {
+            const modal = document.getElementById("modalAtleta");
+            modal.classList.add("hidden");
+            modal.classList.remove("flex");
+        };
+
+        const inputBusca = document.getElementById("inputBusca");
+        const btnLimparBusca = document.getElementById("btnLimparBusca");
+
+        inputBusca.addEventListener("input", (e) => {
+            termoBusca = e.target.value.trim().toLowerCase();
+            if (termoBusca) btnLimparBusca.classList.remove("hidden");
+            else btnLimparBusca.classList.add("hidden");
+            renderizarListaResultados();
+        });
+
+        btnLimparBusca.addEventListener("click", () => {
+            inputBusca.value = "";
+            termoBusca = "";
+            btnLimparBusca.classList.add("hidden");
+            renderizarListaResultados();
+        });
+
+        carregarResultados();
+        setInterval(carregarResultados, 4000);
+    </script>
+</body>
+</html>
